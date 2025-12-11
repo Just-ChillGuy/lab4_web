@@ -2,40 +2,40 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Прогноз погоды</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h1>Прогноз погоды</h1>
-  <div id="controls">
-    <button id="refresh">Обновить</button>
-    <form id="city-form">
-      <input type="text" id="city-input" list="city-list" placeholder="Добавить город" autocomplete="off">
-      <datalist id="city-list">
-        <option value="Москва"></option>
-        <option value="Санкт-Петербург"></option>
-        <option value="Новосибирск"></option>
-        <option value="Екатеринбург"></option>
-        <option value="Казань"></option>
-        <option value="Нижний Новгород"></option>
-        <option value="Челябинск"></option>
-        <option value="Омск"></option>
-        <option value="Самара"></option>
-        <option value="Ростов-на-Дону"></option>
-        <option value="Уфа"></option>
-        <option value="Красноярск"></option>
-        <option value="Воронеж"></option>
-        <option value="Пермь"></option>
-        <option value="Волгоград"></option>
-        <option value="Краснодар"></option>
-      </datalist>
-      <button type="submit" id="city-submit">Добавить</button>
-      <div id="city-error" class="error"></div>
-    </form>
-  </div>
-  <div id="weather-container"></div>
+  <header class="header">
+    <h1>Прогноз погоды</h1>
+  </header>
+
+  <main class="app">
+    <section class="controls" id="controls">
+      <button id="refresh" class="btn">Обновить</button>
+
+      <!-- Форма добавления города (показывается, если геолокация недоступна или пользователь хочет добавить города) -->
+      <form id="city-form" class="city-form" autocomplete="off">
+        <div class="input-wrap">
+          <input id="city-input" type="text" placeholder="Добавить город" />
+          <ul id="suggestions" class="suggestions" role="listbox" aria-label="Подсказки городов"></ul>
+        </div>
+        <button id="city-submit" class="btn" type="submit">Добавить</button>
+        <div id="city-error" class="error" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section id="weather-container" class="weather-container" aria-live="polite">
+      <!-- Здесь будут карточки прогноза -->
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>Данные: OpenWeatherMap. Местоположение: браузерная геолокация.</small>
+  </footer>
+
   <script src="script.js"></script>
 </body>
 </html>
