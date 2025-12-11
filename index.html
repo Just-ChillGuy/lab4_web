@@ -14,26 +14,25 @@
 
   <main class="app">
     <section class="controls" id="controls">
-      <button id="refresh" class="btn">Обновить</button>
+      <button id="refreshBtn" class="btn">Обновить</button>
 
-      <!-- Форма добавления города (показывается, если геолокация недоступна или пользователь хочет добавить города) -->
-      <form id="city-form" class="city-form" autocomplete="off">
+      <div class="city-form" id="city-form">
         <div class="input-wrap">
-          <input id="city-input" type="text" placeholder="Добавить город" />
+          <input id="cityInput" type="text" placeholder="Добавить город" autocomplete="off" />
           <ul id="suggestions" class="suggestions" role="listbox" aria-label="Подсказки городов"></ul>
         </div>
-        <button id="city-submit" class="btn" type="submit">Добавить</button>
-        <div id="city-error" class="error" aria-live="polite"></div>
-      </form>
+        <button id="addCityBtn" class="btn" type="button">Добавить</button>
+        <div id="cityError" class="error" aria-live="polite"></div>
+      </div>
     </section>
 
-    <section id="weather-container" class="weather-container" aria-live="polite">
+    <section id="weatherContainer" class="weather-container" aria-live="polite">
       <!-- Здесь будут карточки прогноза -->
     </section>
   </main>
 
   <footer class="footer">
-    <small>Данные: OpenWeatherMap. Местоположение: браузерная геолокация.</small>
+    <small>Данные: Open-Meteo. Местоположение: браузерная геолокация.</small>
   </footer>
 
   <script src="script.js"></script>
