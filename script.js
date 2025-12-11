@@ -1,4 +1,4 @@
-// script.js — финальная рабочая версия, использующая Open-Meteo API (без ключей)
+// script.js — добавлена кнопка геолокации и логика её работы (Open-Meteo)
 
 const weatherContainer = document.getElementById("weatherContainer");
 const suggestionsEl = document.getElementById("suggestions");
@@ -6,6 +6,7 @@ const cityError = document.getElementById("cityError");
 const cityInput = document.getElementById("cityInput");
 const refreshBtn = document.getElementById("refreshBtn");
 const addCityBtn = document.getElementById("addCityBtn");
+const geoBtn = document.getElementById("geoBtn");
 
 let savedCities = (() => {
   try {
@@ -59,6 +60,7 @@ function humanDate(iso) {
 
 if (suggestionsEl) suggestionsEl.style.display = "none";
 
+/* ---------- suggestions/autocomplete ---------- */
 let suggTimeout = null;
 cityInput.addEventListener("input", () => {
   clearTimeout(suggTimeout);
@@ -108,6 +110,7 @@ suggestionsEl.addEventListener("click", (e) => {
   selectedSuggestion = { name: display.split(",")[0].trim(), displayName: display, lat, lon };
 });
 
+/* ---------- geocoding / forecast helpers ---------- */
 async function geocodeCity(name) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=5&language=ru&format=json`;
   const res = await fetch(url);
@@ -122,6 +125,7 @@ async function fetchForecastByCoords(lat, lon) {
   return res.json();
 }
 
+/* ---------- UI: cards ---------- */
 function createCityCard(city) {
   const card = document.createElement("div");
   card.className = "weather-card";
@@ -188,6 +192,7 @@ async function loadForecastForCard(city, cardEl) {
   }
 }
 
+/* ---------- render / refresh ---------- */
 function renderAll() {
   weatherContainer.innerHTML = "";
   if (!Array.isArray(savedCities) || savedCities.length === 0) {
@@ -197,6 +202,7 @@ function renderAll() {
   for (const city of savedCities) {
     const card = createCityCard(city);
     weatherContainer.appendChild(card);
+    // load without awaiting to keep UI responsive
     loadForecastForCard(city, card);
   }
 }
@@ -210,6 +216,7 @@ async function refreshAll() {
 }
 refreshBtn.addEventListener("click", () => { refreshAll(); });
 
+/* ---------- add city logic ---------- */
 async function handleAddCity() {
   const name = cityInput.value.trim();
   cityError.textContent = "";
@@ -244,7 +251,7 @@ async function handleAddCity() {
 addCityBtn.addEventListener("click", handleAddCity);
 cityInput.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); handleAddCity(); }});
 
-// При клике вне формы скрываем подсказки
+/* hide suggestions when clicking outside */
 document.addEventListener("click", (e) => {
   if (!cityInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
     suggestionsEl.style.display = "none";
@@ -252,45 +259,75 @@ document.addEventListener("click", (e) => {
   }
 });
 
-async function init() {
-  if ((!savedCities || savedCities.length === 0) && navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(async pos=>{
-      try {
-        const lat = pos.coords.latitude; 
-        const lon = pos.coords.longitude;
+/* ---------- geolocation button: add or update geo city ---------- */
+function getCurrentPositionPromise(options = {}) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Геолокация не поддерживается"));
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
 
-        let display = "Текущее местоположение";
-        try {
-          const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&count=1&language=ru`);
-          if (rev.ok) {
-            const data = await rev.json();
-            if (data.results && data.results[0]) {
-              const r = data.results[0];
-              display = `${r.name}${r.admin1?", "+r.admin1:""}${r.country?", "+r.country:""}`;
-            }
-          }
-        } catch (e) {
-          // ignore
+async function addOrUpdateGeoCity(showErrors = true) {
+  try {
+    const pos = await getCurrentPositionPromise({ timeout: 10000 });
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    // Try reverse geocoding for human-readable name
+    let display = "Текущее местоположение";
+    try {
+      const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&count=1&language=ru`);
+      if (rev.ok) {
+        const data = await rev.json();
+        if (data.results && data.results[0]) {
+          const r = data.results[0];
+          display = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? ", " + r.country : ""}`;
         }
-
-        const city = { id: uid(), name: "geo", displayName: display, lat, lon, isGeo:true };
-        savedCities.push(city); 
-        saveCities();
-
-        const card = createCityCard(city);
-        weatherContainer.appendChild(card);
-        await loadForecastForCard(city, card);
-      } catch(e){
-        console.warn("Геолокация или обратный геокодинг не удались", e);
-        renderAll();
       }
-    }, err=>{
-      console.log("Геолокация недоступна", err);
+    } catch (e) {
+      // ignore reverse errors
+    }
+
+    // If geo entry exists — update it; otherwise add new
+    const existingGeo = savedCities.find(c => c.isGeo);
+    if (existingGeo) {
+      existingGeo.lat = lat;
+      existingGeo.lon = lon;
+      existingGeo.displayName = display;
+      // if it had name "geo" keep it; save and refresh specific card
+      saveCities();
       renderAll();
-    }, {timeout:8000});
-  } else {
-    renderAll();
+    } else {
+      const city = { id: uid(), name: "geo", displayName: display, lat, lon, isGeo: true };
+      // put geo at beginning for convenience
+      savedCities.unshift(city);
+      saveCities();
+      renderAll();
+    }
+    cityError.textContent = "";
+  } catch (err) {
+    console.warn("addOrUpdateGeoCity error", err);
+    if (showErrors) {
+      if (err.code === 1) cityError.textContent = "Доступ к геопозиции запрещён";
+      else cityError.textContent = "Не удалось получить геопозицию";
+    }
   }
+}
+if (geoBtn) geoBtn.addEventListener("click", () => addOrUpdateGeoCity(true));
+
+/* ---------- initialization ---------- */
+async function init() {
+  // If no saved cities — try to add geo automatically
+  if ((!savedCities || savedCities.length === 0) && navigator.geolocation) {
+    try {
+      // try to add geo but don't show error message if denied
+      await addOrUpdateGeoCity(false);
+    } catch (e) {
+      // fallback to render (will show "Нет сохранённых городов")
+    }
+  }
+  // render whatever we have (addOrUpdateGeoCity already calls renderAll)
+  renderAll();
 }
 
 init();
