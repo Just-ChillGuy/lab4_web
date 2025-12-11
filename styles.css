@@ -27,6 +27,7 @@ body{
 
 .header{ text-align:center; margin-bottom:8px;}
 .header h1{margin:6px 0; font-size:1.4rem;}
+.current-location{font-size:0.9rem; color:var(--muted); margin-top:6px;}
 
 .app{flex:1; display:flex; flex-direction:column; gap:16px; max-width:var(--max-width); margin:0 auto; width:100%;}
 
