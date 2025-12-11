@@ -1,4 +1,4 @@
-// script.js — финальная версия, использующая Open-Meteo (без ключей)
+// script.js — финальная рабочая версия, использующая Open-Meteo API (без ключей)
 
 const weatherContainer = document.getElementById("weatherContainer");
 const suggestionsEl = document.getElementById("suggestions");
@@ -57,7 +57,6 @@ function humanDate(iso) {
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
-// Скрыть suggestions по умолчанию
 if (suggestionsEl) suggestionsEl.style.display = "none";
 
 let suggTimeout = null;
@@ -117,7 +116,6 @@ async function geocodeCity(name) {
 }
 
 async function fetchForecastByCoords(lat, lon) {
-  // forecast_days можно задать, но Open-Meteo вернёт минимум нужное количество.
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=4`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Ошибка получения прогноза");
@@ -181,7 +179,7 @@ async function loadForecastForCard(city, cardEl) {
       const minVal = (typeof tmin[i] !== "undefined") ? Math.round(tmin[i]) : "—";
       const maxVal = (typeof tmax[i] !== "undefined") ? Math.round(tmax[i]) : "—";
       const weatherText = (typeof codes[i] !== "undefined" && weatherCodes[codes[i]]) ? weatherCodes[codes[i]] : "—";
-      html += `<div class="day"><b>${dateLabel}${timeVal ? ` (${humanDate(timeVal)})` : ""}:</b> ${minVal}°C — ${maxVal}°C, ${escapeHtml(weatherText)}</div>`;
+      html += `<div class="day"><div><b>${dateLabel}${timeVal ? ` (${humanDate(timeVal)})` : ""}:</b><div class="desc">${escapeHtml(weatherText)}</div></div><div class="temps">${minVal}°C — ${maxVal}°C</div></div>`;
     }
     body.innerHTML = html;
   } catch (err) {
@@ -199,7 +197,6 @@ function renderAll() {
   for (const city of savedCities) {
     const card = createCityCard(city);
     weatherContainer.appendChild(card);
-    // не ждем, чтобы не блокировать интерфейс
     loadForecastForCard(city, card);
   }
 }
@@ -256,7 +253,6 @@ document.addEventListener("click", (e) => {
 });
 
 async function init() {
-  // Если нет сохранённых городов и есть геолокация — пробуем получить текущее местоположение
   if ((!savedCities || savedCities.length === 0) && navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(async pos=>{
       try {
@@ -274,7 +270,7 @@ async function init() {
             }
           }
         } catch (e) {
-          // обратный геокодинг не обязателен — продолжаем
+          // ignore
         }
 
         const city = { id: uid(), name: "geo", displayName: display, lat, lon, isGeo:true };
