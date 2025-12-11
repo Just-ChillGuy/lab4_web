@@ -1,4 +1,4 @@
-// script.js — финальная версия (Open-Meteo, без ключей)
+// script.js — финальная версия (Open-Meteo, без ключей). Показывает текущее местоположение в header.
 
 const weatherContainer = document.getElementById("weatherContainer");
 const suggestionsEl = document.getElementById("suggestions");
@@ -7,6 +7,7 @@ const cityInput = document.getElementById("cityInput");
 const refreshBtn = document.getElementById("refreshBtn");
 const addCityBtn = document.getElementById("addCityBtn");
 const geoBtn = document.getElementById("geoBtn");
+const currentLocationEl = document.getElementById("currentLocation");
 
 let savedCities = (() => {
   try {
@@ -60,7 +61,7 @@ function humanDate(iso) {
 
 if (suggestionsEl) suggestionsEl.style.display = "none";
 
-/* ---------- suggestions/autocomplete ---------- */
+/* ---------- autocomplete (Open-Meteo geocoding) ---------- */
 let suggTimeout = null;
 cityInput.addEventListener("input", () => {
   clearTimeout(suggTimeout);
@@ -127,6 +128,33 @@ async function fetchForecastByCoords(lat, lon) {
   return res.json();
 }
 
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&count=1&language=ru`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.results && data.results[0]) {
+      const r = data.results[0];
+      return `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? ", " + r.country : ""}`;
+    }
+    return null;
+  } catch (e) {
+    console.warn("reverseGeocode error", e);
+    return null;
+  }
+}
+
+/* ---------- update current location display ---------- */
+function updateCurrentLocationElement() {
+  const geo = savedCities.find(c => c.isGeo);
+  if (geo && currentLocationEl) {
+    currentLocationEl.textContent = `Местоположение: ${geo.displayName || 'Текущее местоположение'}`;
+  } else if (currentLocationEl) {
+    currentLocationEl.textContent = '';
+  }
+}
+
 /* ---------- UI: cards ---------- */
 function createCityCard(city) {
   const card = document.createElement("div");
@@ -148,9 +176,11 @@ function createCityCard(city) {
   `;
   const removeBtn = card.querySelector(".remove-card");
   removeBtn.addEventListener("click", () => {
+    const wasGeo = savedCities.find(c => c.id === city.id && c.isGeo);
     savedCities = savedCities.filter(c => c.id !== city.id);
     saveCities();
     renderAll();
+    if (wasGeo) updateCurrentLocationElement();
   });
   return card;
 }
@@ -199,13 +229,16 @@ function renderAll() {
   weatherContainer.innerHTML = "";
   if (!Array.isArray(savedCities) || savedCities.length === 0) {
     weatherContainer.innerHTML = `<p class="loading">Нет сохранённых городов. Разрешите геолокацию или добавьте город вручную.</p>`;
+    updateCurrentLocationElement();
     return;
   }
   for (const city of savedCities) {
     const card = createCityCard(city);
     weatherContainer.appendChild(card);
+    // load without awaiting to keep UI responsive
     loadForecastForCard(city, card);
   }
+  updateCurrentLocationElement();
 }
 
 async function refreshAll() {
@@ -275,19 +308,10 @@ async function addOrUpdateGeoCity(showErrors = true) {
     const lon = pos.coords.longitude;
 
     // Try reverse geocoding for human-readable name
-    let display = "Текущее местоположение";
-    try {
-      const rev = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&count=1&language=ru`);
-      if (rev.ok) {
-        const data = await rev.json();
-        if (data.results && data.results[0]) {
-          const r = data.results[0];
-          display = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? ", " + r.country : ""}`;
-        }
-      }
-    } catch (e) {
-      // ignore reverse errors
-    }
+    let display = null;
+    const rev = await reverseGeocode(lat, lon);
+    if (rev) display = rev;
+    if (!display) display = "Текущее местоположение";
 
     // If geo entry exists — update it; otherwise add new
     const existingGeo = savedCities.find(c => c.isGeo);
@@ -299,10 +323,13 @@ async function addOrUpdateGeoCity(showErrors = true) {
       renderAll();
     } else {
       const city = { id: uid(), name: "geo", displayName: display, lat, lon, isGeo: true };
+      // put geo at beginning for convenience
       savedCities.unshift(city);
       saveCities();
       renderAll();
     }
+    // update header display
+    updateCurrentLocationElement();
     cityError.textContent = "";
   } catch (err) {
     console.warn("addOrUpdateGeoCity error", err);
