@@ -1,4 +1,4 @@
-// script.js — добавлена кнопка геолокации и логика её работы (Open-Meteo)
+// script.js — финальная версия (Open-Meteo, без ключей)
 
 const weatherContainer = document.getElementById("weatherContainer");
 const suggestionsEl = document.getElementById("suggestions");
@@ -67,19 +67,19 @@ cityInput.addEventListener("input", () => {
   const v = cityInput.value.trim();
   selectedSuggestion = null;
   cityError.textContent = "";
-  if (!v) { suggestionsEl.style.display = "none"; suggestionsEl.innerHTML = ""; return; }
+  if (!v) { if (suggestionsEl) { suggestionsEl.style.display = "none"; suggestionsEl.innerHTML = ""; } return; }
 
   suggTimeout = setTimeout(async () => {
     try {
       const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=8&language=ru&format=json`;
       const res = await fetch(url);
-      if (!res.ok) { suggestionsEl.style.display = "none"; return; }
+      if (!res.ok) { if (suggestionsEl) suggestionsEl.style.display = "none"; return; }
       const data = await res.json();
       if (!data.results || data.results.length === 0) {
-        suggestionsEl.style.display = "none";
-        suggestionsEl.innerHTML = "";
+        if (suggestionsEl) { suggestionsEl.style.display = "none"; suggestionsEl.innerHTML = ""; }
         return;
       }
+      if (!suggestionsEl) return;
       suggestionsEl.innerHTML = data.results
         .map(r => {
           const disp = `${r.name}${r.admin1 ? ", " + r.admin1 : ""}${r.country ? ", " + r.country : ""}`;
@@ -92,23 +92,25 @@ cityInput.addEventListener("input", () => {
       suggestionsEl.style.display = "block";
     } catch (err) { 
       console.warn("Ошибка подсказок", err);
-      suggestionsEl.style.display = "none";
+      if (suggestionsEl) suggestionsEl.style.display = "none";
     }
   }, 250);
 });
 
-suggestionsEl.addEventListener("click", (e) => {
-  const li = e.target.closest("li");
-  if (!li) return;
-  const lat = parseFloat(li.dataset.lat);
-  const lon = parseFloat(li.dataset.lon);
-  const display = li.dataset.display || li.textContent.trim();
+if (suggestionsEl) {
+  suggestionsEl.addEventListener("click", (e) => {
+    const li = e.target.closest("li");
+    if (!li) return;
+    const lat = parseFloat(li.dataset.lat);
+    const lon = parseFloat(li.dataset.lon);
+    const display = li.dataset.display || li.textContent.trim();
 
-  cityInput.value = display;
-  suggestionsEl.style.display = "none";
-  suggestionsEl.innerHTML = "";
-  selectedSuggestion = { name: display.split(",")[0].trim(), displayName: display, lat, lon };
-});
+    cityInput.value = display;
+    suggestionsEl.style.display = "none";
+    suggestionsEl.innerHTML = "";
+    selectedSuggestion = { name: display.split(",")[0].trim(), displayName: display, lat, lon };
+  });
+}
 
 /* ---------- geocoding / forecast helpers ---------- */
 async function geocodeCity(name) {
@@ -202,7 +204,6 @@ function renderAll() {
   for (const city of savedCities) {
     const card = createCityCard(city);
     weatherContainer.appendChild(card);
-    // load without awaiting to keep UI responsive
     loadForecastForCard(city, card);
   }
 }
@@ -214,7 +215,7 @@ async function refreshAll() {
     if (city) await loadForecastForCard(city, card);
   }
 }
-refreshBtn.addEventListener("click", () => { refreshAll(); });
+if (refreshBtn) refreshBtn.addEventListener("click", () => { refreshAll(); });
 
 /* ---------- add city logic ---------- */
 async function handleAddCity() {
@@ -248,12 +249,12 @@ async function handleAddCity() {
     cityError.textContent="Ошибка сети";
   }
 }
-addCityBtn.addEventListener("click", handleAddCity);
+if (addCityBtn) addCityBtn.addEventListener("click", handleAddCity);
 cityInput.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); handleAddCity(); }});
 
 /* hide suggestions when clicking outside */
 document.addEventListener("click", (e) => {
-  if (!cityInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
+  if (!cityInput.contains(e.target) && suggestionsEl && !suggestionsEl.contains(e.target)) {
     suggestionsEl.style.display = "none";
     suggestionsEl.innerHTML = "";
   }
@@ -294,12 +295,10 @@ async function addOrUpdateGeoCity(showErrors = true) {
       existingGeo.lat = lat;
       existingGeo.lon = lon;
       existingGeo.displayName = display;
-      // if it had name "geo" keep it; save and refresh specific card
       saveCities();
       renderAll();
     } else {
       const city = { id: uid(), name: "geo", displayName: display, lat, lon, isGeo: true };
-      // put geo at beginning for convenience
       savedCities.unshift(city);
       saveCities();
       renderAll();
@@ -308,7 +307,7 @@ async function addOrUpdateGeoCity(showErrors = true) {
   } catch (err) {
     console.warn("addOrUpdateGeoCity error", err);
     if (showErrors) {
-      if (err.code === 1) cityError.textContent = "Доступ к геопозиции запрещён";
+      if (err && err.code === 1) cityError.textContent = "Доступ к геопозиции запрещён";
       else cityError.textContent = "Не удалось получить геопозицию";
     }
   }
@@ -317,16 +316,13 @@ if (geoBtn) geoBtn.addEventListener("click", () => addOrUpdateGeoCity(true));
 
 /* ---------- initialization ---------- */
 async function init() {
-  // If no saved cities — try to add geo automatically
   if ((!savedCities || savedCities.length === 0) && navigator.geolocation) {
     try {
-      // try to add geo but don't show error message if denied
       await addOrUpdateGeoCity(false);
     } catch (e) {
-      // fallback to render (will show "Нет сохранённых городов")
+      // fallback
     }
   }
-  // render whatever we have (addOrUpdateGeoCity already calls renderAll)
   renderAll();
 }
 
