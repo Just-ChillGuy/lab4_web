@@ -1,0 +1,120 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #eef;
+    color: #333;
+    text-align: center;
+}
+
+h1 {
+    margin: 20px;
+}
+
+#controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px;
+}
+
+#refresh {
+    padding: 8px 12px;
+    margin: 5px;
+    font-size: 1em;
+}
+
+#city-form {
+    display: flex;
+    align-items: center;
+    margin: 5px;
+}
+
+#city-input {
+    padding: 6px;
+    font-size: 1em;
+    min-width: 150px;
+}
+
+#city-submit {
+    padding: 6px 10px;
+    margin-left: 5px;
+    font-size: 1em;
+}
+
+.error {
+    color: red;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+#weather-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 10px;
+}
+
+.forecast-card {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin: 10px;
+    padding: 10px;
+    width: 200px;
+}
+
+.forecast-card h2 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.daily-forecast {
+    display: flex;
+    justify-content: space-between;
+}
+
+.day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 5px;
+}
+
+.day .date {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.day .icon {
+    width: 50px;
+    height: 50px;
+}
+
+.day .desc {
+    text-transform: capitalize;
+    margin: 5px 0;
+}
+
+.day .temp {
+    font-weight: bold;
+}
+
+.loading, .error {
+    text-align: center;
+    margin: 10px 0;
+}
+
+@media (max-width: 600px) {
+    #controls {
+        flex-direction: column;
+    }
+    .daily-forecast {
+        flex-direction: column;
+    }
+    .forecast-card {
+        width: 100%;
+        max-width: 300px;
+    }
+}
