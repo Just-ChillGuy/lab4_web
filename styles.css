@@ -39,7 +39,6 @@ body{
   justify-content:center;
 }
 
-/* Кнопки */
 .btn{
   background:var(--accent);
   color:#fff;
@@ -52,7 +51,6 @@ body{
 .btn:active{transform:translateY(1px)}
 .btn[disabled]{opacity:0.6;cursor:not-allowed}
 
-/* Форма ввода */
 .city-form{display:flex; gap:8px; align-items:flex-start;}
 .input-wrap{position:relative; width:260px; max-width:60vw;}
 #cityInput{
