@@ -1,5 +1,3 @@
-// script.js — исправленная версия (см. комментарии в коде)
-
 const App = (() => {
   const API = {
     GEOCODE_SEARCH: 'https://geocoding-api.open-meteo.com/v1/search',
@@ -26,7 +24,6 @@ const App = (() => {
 
   const $ = (id) => document.getElementById(id);
 
-  // safe JSON parse that returns fallback if parse yields null/invalid
   function safeParseJSONWithFallback(raw, fallback) {
     try {
       if (raw === null || typeof raw === 'undefined') return fallback;
@@ -72,7 +69,6 @@ const App = (() => {
     81: "Сильный ливень",82: "Очень сильный ливень",95: "Гроза",96: "Гроза с небольшим градом",99: "Гроза с градом"
   };
 
-  // API клиент: геокодинг (по имени)
   async function apiGeocode(q, count = DEFAULTS.SUGGEST_COUNT) {
     const url = `${API.GEOCODE_SEARCH}?name=${encodeURIComponent(q)}&count=${count}&language=ru&format=json`;
     const res = await fetch(url);
@@ -80,7 +76,6 @@ const App = (() => {
     return res.json();
   }
 
-  // API клиент: reverse geocode — ОБЯЗАТЕЛЬНО ловим ошибки (CORS / network)
   async function apiGeocodeReverse(lat, lon, count = 1) {
     try {
       const url = `${API.GEOCODE_REVERSE}?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&count=${count}&language=ru`;
@@ -88,7 +83,6 @@ const App = (() => {
       if (!res.ok) return null;
       return res.json();
     } catch (e) {
-      // Если fetch упал (например, CORS blocked), просто вернуть null и работать дальше
       console.warn('apiGeocodeReverse fetch failed (network/CORS):', e);
       return null;
     }
@@ -114,7 +108,6 @@ const App = (() => {
         headerLocation: $(UI_IDS.CURRENT_LOCATION)
       };
 
-      // ИСПРАВЛЕНИЕ: гарантируем, что cities всегда массив (включая случай, когда в localStorage лежит "null")
       this.cities = storage.get('cities', []) || [];
       this.currentPick = null;
       this.geocodeCache = new Map();
@@ -283,7 +276,6 @@ const App = (() => {
       });
     }
 
-    // ИСПРАВЛЕНИЕ: используем apiGeocodeReverse, который сам ловит CORS/network ошибки и возвращает null
     async addOrUpdateGeo(showErrors = true) {
       try {
         const pos = await this._getCurrentPosition({ timeout: DEFAULTS.GEO_TIMEOUT_MS });
