@@ -40,7 +40,6 @@
     return r.json();
   };
 
-  // -------- StorageHelper --------
   function StorageHelper() {}
 
   StorageHelper.safeParse = function (raw, fallback) {
@@ -76,7 +75,6 @@
     }
   };
 
-  // -------- Utilities --------
   function uid(n) {
     if (typeof n === 'undefined') {
       n = 8;
@@ -218,7 +216,7 @@
             self._hideSuggestions();
           }
         }
-      } catch (ignore) { /* safe */ }
+      } catch (ignore) { }
     });
 
     if (this.nodes.addBtn) {
